@@ -61,3 +61,20 @@ def test_reveal_forwards_optional_legacy_context(monkeypatch):
     monkeypatch.setattr(api, "get_client", lambda: fake)
     api.reveal_secret("SSH_PASSWORD", requesting_agent="Melchior", tool="ssh")
     assert fake.calls[0][1]["payload"] == {"requesting_agent": "Melchior", "tool": "ssh"}
+
+
+def test_optional_secret_folders_field_updates_and_transfer(monkeypatch):
+    api = load_api(monkeypatch)
+    fake = FakeClient()
+    monkeypatch.setattr(api, "get_client", lambda: fake)
+    api.create_secret("Token", "test-value", folder_id="home")
+    api.list_secret_folders()
+    api.reveal_secret("vw:account:item", field="login.username")
+    api.update_secret("vw:account:item", "version", "test-new", field="login.password")
+    api.migrate_secret("sec_local", 1, target_id="vw:account:item", field="login.password")
+    assert fake.calls[0][1]["payload"]["folder_id"] == "home"
+    assert "space_id" not in fake.calls[0][1]["payload"]
+    assert fake.calls[1][0] == ("GET", "/api/v2/secrets/folders")
+    assert fake.calls[2][1]["payload"] == {"field": "login.username"}
+    assert fake.calls[3][1]["payload"]["expected_version"] == "version"
+    assert fake.calls[4][0][1] == "/api/v2/secrets/sec_local/migrate"

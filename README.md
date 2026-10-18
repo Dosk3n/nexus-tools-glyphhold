@@ -1,6 +1,6 @@
 # Nexus tools for Glyph Hold
 
-Version 2.0.0 targets Glyph Hold 2.x's `/api/v2` contract. Install the tool pack into your
+Version 2.1.0 targets Glyph Hold 2.x's `/api/v2` contract. Install the tool pack into your
 Nexus environment and enable `nexus_tools_glyphhold.api` using the existing Nexus
 pack-loading mechanism. Configure `GLYPHHOLD_URL`, `GLYPHHOLD_API_KEY`, optional
 `GLYPHHOLD_TIMEOUT_SECONDS`, `GLYPHHOLD_VERIFY_SSL` and `GLYPHHOLD_CA_BUNDLE`.
@@ -51,3 +51,27 @@ HTTP redirects are rejected so credentials are never forwarded to another host.
 Errors exclude response bodies, and responses are limited to 8 MiB; reduce the
 requested record count if that budget is exceeded. Secret reveal supports legacy
 `requesting_agent` and `tool` labels when an installation retains those constraints.
+
+## Live secret providers (2.1)
+
+With Vaultwarden enabled, search and metadata read all accessible vault entries
+directly, including pre-existing items. Built-in secrets remain accessible.
+Secret `space_id` is accepted for compatibility but no longer scopes access;
+API keys still require secret permissions. Memory spaces are unchanged.
+
+`create_secret` uses the active provider and rejects duplicate names. Optional
+`folder_id` chooses a vault folder; omission uses the configured default and an
+empty string means unfiled. `list_secret_folders` and `create_secret_folder`
+manage optional folders. No memory-to-folder mapping or item linking is needed.
+
+`reveal_secret(field=...)` selects a field from metadata (password, username,
+SSH keys, notes, card/identity or custom fields). `update_secret` requires the
+current metadata version and preserves other fields. External changes cannot
+be made atomically against concurrent edits in other Bitwarden clients.
+
+`migrate_secret` transfers a built-in secret without exposing its value to the
+agent. Search first: provide an existing `target_id` and field to verify equal
+values, or omit target ID to create only when the name is unused. Conflicts
+retain both values for user review; never blindly overwrite or export plaintext.
+Provider outages fail explicitly rather than look like an empty vault. Upgrade
+the server and adapters together to use these operations.

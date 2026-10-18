@@ -243,11 +243,20 @@ def placement_guidance(space_id: str | None = None) -> dict[str, Any]:
 
 
 @register_tool(
-    namespace="glyphhold", description="Search secret metadata; never returns secret values."
+    namespace="glyphhold",
+    description="Search global secret metadata in the active vault and built-in storage. provider_name=builtin permits local-only access during vault outages; never returns values.",
 )
-def search_secrets(query: str = "", *, space_id: str | None = None) -> dict[str, Any]:
+def search_secrets(
+    query: str = "", *, space_id: str | None = None, provider_name: str | None = None
+) -> dict[str, Any]:
     return get_client().request(
-        "GET", "/api/v2/secrets", params={"query": query, "space_id": space_id}
+        "GET",
+        "/api/v2/secrets",
+        params={
+            "query": query,
+            "space_id": space_id,
+            **({"provider_name": provider_name} if provider_name else {}),
+        },
     )
 
 
@@ -263,32 +272,42 @@ def get_secret_metadata(id_or_name: str, *, space_id: str | None = None) -> dict
 
 @register_tool(
     namespace="glyphhold",
-    description="Store reusable operational credentials in an explicit permitted space.",
+    description="Create a global secret in the active provider after searching for duplicates. Optional folder_id; empty string means unfiled, omission uses default.",
 )
 def create_secret(
     name: str,
     value: str,
-    space_id: str,
+    space_id: str | None = None,
     *,
     description: str | None = None,
     value_type: str = "text",
+    folder_id: str | None = None,
+    username: str | None = None,
+    uri: str | None = None,
 ) -> dict[str, Any]:
     return get_client().request(
         "POST",
         "/api/v2/secrets",
         payload={
-            "name": name,
-            "value": value,
-            "space_id": space_id,
-            "description": description,
-            "value_type": value_type,
+            k: v
+            for k, v in {
+                "name": name,
+                "value": value,
+                "space_id": space_id,
+                "description": description,
+                "value_type": value_type,
+                "folder_id": folder_id,
+                "username": username,
+                "uri": uri,
+            }.items()
+            if v is not None
         },
     )
 
 
 @register_tool(
     namespace="glyphhold",
-    description="Explicitly reveal one secret only when the user requests its value or authorises a task requiring it.",
+    description="Explicitly reveal one secret field for an authorised task. Choose field from metadata for username, password, SSH key, notes or custom fields.",
 )
 def reveal_secret(
     id_or_name: str,
@@ -296,6 +315,7 @@ def reveal_secret(
     space_id: str | None = None,
     requesting_agent: str | None = None,
     tool: str | None = None,
+    field: str | None = None,
 ) -> dict[str, Any]:
     return get_client().request(
         "POST",
@@ -303,7 +323,76 @@ def reveal_secret(
         params={"space_id": space_id},
         payload={
             k: v
-            for k, v in {"requesting_agent": requesting_agent, "tool": tool}.items()
+            for k, v in {"requesting_agent": requesting_agent, "tool": tool, "field": field}.items()
+            if v is not None
+        },
+    )
+
+
+@register_tool(
+    namespace="glyphhold",
+    description="List optional Vaultwarden folders. Built-in storage returns supported=false.",
+)
+def list_secret_folders() -> dict[str, Any]:
+    return get_client().request("GET", "/api/v2/secrets/folders")
+
+
+@register_tool(
+    namespace="glyphhold",
+    description="Create a vault folder after checking existing folders.",
+    tool_class="write",
+)
+def create_secret_folder(name: str) -> dict[str, Any]:
+    return get_client().request("POST", "/api/v2/secrets/folders", payload={"name": name})
+
+
+@register_tool(
+    namespace="glyphhold",
+    description="Update one explicitly selected secret field with its current metadata version; never overwrite conflicts without authorisation.",
+    tool_class="write",
+)
+def update_secret(
+    id_or_name: str, expected_version: int | str, value: str, *, field: str | None = None
+) -> dict[str, Any]:
+    return get_client().request(
+        "PATCH",
+        "/api/v2/secrets/" + quote(id_or_name, safe=""),
+        payload={
+            k: v
+            for k, v in {
+                "expected_version": expected_version,
+                "value": value,
+                "field": field,
+            }.items()
+            if v is not None
+        },
+    )
+
+
+@register_tool(
+    namespace="glyphhold",
+    description="Transfer a built-in secret server-to-server. Search first; target_id+field verifies identical existing values, otherwise creation requires an unused name. Conflicts retain both values; no plaintext export.",
+    tool_class="write",
+)
+def migrate_secret(
+    id_or_name: str,
+    expected_version: int,
+    *,
+    target_id: str | None = None,
+    field: str | None = None,
+    folder_id: str | None = None,
+) -> dict[str, Any]:
+    return get_client().request(
+        "POST",
+        "/api/v2/secrets/" + quote(id_or_name, safe="") + "/migrate",
+        payload={
+            k: v
+            for k, v in {
+                "expected_version": expected_version,
+                "target_id": target_id,
+                "field": field,
+                "folder_id": folder_id,
+            }.items()
             if v is not None
         },
     )

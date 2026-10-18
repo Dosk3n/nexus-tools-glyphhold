@@ -15,7 +15,7 @@ try:
 except ImportError:
     _nexus_get_setting = None
 
-DEFAULT_USER_AGENT = "NexusMCP/0.1 nexus-tools-glyphhold/2.0.0"
+DEFAULT_USER_AGENT = "NexusMCP/0.1 nexus-tools-glyphhold/2.1.0"
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
