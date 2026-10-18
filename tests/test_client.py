@@ -179,3 +179,24 @@ def test_unusable_responses_have_safe_errors(monkeypatch, body, reason):
     monkeypatch.setattr(GlyphHoldClient, "_open", lambda *a, **kw: Response(None))
     with pytest.raises(GlyphHoldClientError, match=reason):
         GlyphHoldClient("http://gh", "key").health()
+
+
+def test_safe_provider_error_hint_never_echoes_error_body(monkeypatch):
+    import io
+    import urllib.error
+
+    client = GlyphHoldClient(base_url="http://gh", api_key="test")
+
+    def fail(*a, **k):
+        raise urllib.error.HTTPError(
+            "http://gh",
+            503,
+            "Unavailable",
+            {"X-GlyphHold-Error": "vault_get_failed"},
+            io.BytesIO(b"private-secret-value"),
+        )
+
+    monkeypatch.setattr(client, "_open", fail)
+    with pytest.raises(GlyphHoldClientError) as exc:
+        client.request("GET", "/api/v2/secrets/test")
+    assert "Vault get failed" in str(exc.value) and "private-secret-value" not in str(exc.value)

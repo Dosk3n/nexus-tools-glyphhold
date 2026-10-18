@@ -78,3 +78,11 @@ def test_optional_secret_folders_field_updates_and_transfer(monkeypatch):
     assert fake.calls[2][1]["payload"] == {"field": "login.username"}
     assert fake.calls[3][1]["payload"]["expected_version"] == "version"
     assert fake.calls[4][0][1] == "/api/v2/secrets/sec_local/migrate"
+
+
+def test_migration_preview_payload(monkeypatch):
+    api = load_api(monkeypatch)
+    fake = FakeClient()
+    monkeypatch.setattr(api, "get_client", lambda: fake)
+    api.migrate_secret("sec_test", 1, dry_run=True)
+    assert fake.calls[0][1]["payload"]["dry_run"] is True

@@ -15,7 +15,24 @@ try:
 except ImportError:
     _nexus_get_setting = None
 
-DEFAULT_USER_AGENT = "NexusMCP/0.1 nexus-tools-glyphhold/2.1.0"
+DEFAULT_USER_AGENT = "NexusMCP/0.1 nexus-tools-glyphhold/2.1.1"
+
+
+SAFE_VAULT_ERRORS = {
+    "vault_item_not_found": "Vault item not found; search again and use a current ID",
+    "vault_unavailable": "External vault unavailable; test the saved connection.",
+    "secret_values_differ": "Values differ; both secrets retained. Ask the user.",
+    "vault_status_failed": "Vault status failed. Test the saved connection or repeat this read.",
+    "vault_config_failed": "Vault config failed. Test the saved connection or repeat this read.",
+    "vault_login_failed": "Vault login failed. Test the saved connection or repeat this read.",
+    "vault_unlock_failed": "Vault unlock failed. Test the saved connection or repeat this read.",
+    "vault_sync_failed": "Vault sync failed. Test the saved connection or repeat this read.",
+    "vault_get_failed": "Vault get failed. Test the saved connection or repeat this read.",
+    "vault_list_failed": "Vault list failed. Test the saved connection or repeat this read.",
+    "vault_create_failed": "Vault create failed. Check the destination before retrying.",
+    "vault_edit_failed": "Vault edit failed. Check the destination before retrying.",
+    "vault_operation_failed": "Vault operation failed. Test the saved connection.",
+}
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -137,6 +154,14 @@ class GlyphHoldClient:
                 except UnicodeError as exc:
                     raise GlyphHoldClientError("Glyph Hold returned invalid text") from exc
         except urllib.error.HTTPError as exc:
+            hint = (
+                SAFE_VAULT_ERRORS.get(exc.headers.get("X-GlyphHold-Error", ""))
+                if exc.headers
+                else None
+            )
+            if hint:
+                raise GlyphHoldClientError(f"Glyph Hold HTTP {exc.code}: {hint}") from exc
+
             raise GlyphHoldClientError(
                 f"Glyph Hold returned HTTP {exc.code}; check permissions, versions and server status"
             ) from exc

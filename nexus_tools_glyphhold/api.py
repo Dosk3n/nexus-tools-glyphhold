@@ -244,7 +244,7 @@ def placement_guidance(space_id: str | None = None) -> dict[str, Any]:
 
 @register_tool(
     namespace="glyphhold",
-    description="Search global secret metadata in the active vault and built-in storage. provider_name=builtin permits local-only access during vault outages; never returns values.",
+    description="Search global secret metadata by name, folder, saved website address or hostname. provider_name=builtin permits local-only access during vault outages; never returns values.",
 )
 def search_secrets(
     query: str = "", *, space_id: str | None = None, provider_name: str | None = None
@@ -371,7 +371,7 @@ def update_secret(
 
 @register_tool(
     namespace="glyphhold",
-    description="Transfer a built-in secret server-to-server. Search first; target_id+field verifies identical existing values, otherwise creation requires an unused name. Conflicts retain both values; no plaintext export.",
+    description="Transfer a built-in secret server-to-server. Search first; target_id+field verifies identical existing values, otherwise creation requires an unused name. Conflicts retain both values; no plaintext export. Use dry_run=true to preview without changes.",
     tool_class="write",
 )
 def migrate_secret(
@@ -381,6 +381,7 @@ def migrate_secret(
     target_id: str | None = None,
     field: str | None = None,
     folder_id: str | None = None,
+    dry_run: bool = False,
 ) -> dict[str, Any]:
     return get_client().request(
         "POST",
@@ -392,6 +393,7 @@ def migrate_secret(
                 "target_id": target_id,
                 "field": field,
                 "folder_id": folder_id,
+                **({"dry_run": True} if dry_run else {}),
             }.items()
             if v is not None
         },
