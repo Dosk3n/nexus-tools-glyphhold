@@ -385,7 +385,9 @@ def migrate_secret(
 ) -> dict[str, Any]:
     return get_client().request(
         "POST",
-        "/api/v2/secrets/" + quote(id_or_name, safe="") + "/migrate",
+        "/api/v2/secrets/"
+        + quote(id_or_name, safe="")
+        + ("/migrate/preview" if dry_run else "/migrate"),
         payload={
             k: v
             for k, v in {
