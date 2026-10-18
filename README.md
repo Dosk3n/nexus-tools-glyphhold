@@ -1,6 +1,6 @@
 # Nexus tools for Glyph Hold
 
-Version 2.1.1 targets Glyph Hold 2.x's `/api/v2` contract. Install the tool pack into your
+Version 2.1.2 targets Glyph Hold 2.x's `/api/v2` contract. Install the tool pack into your
 Nexus environment and enable `nexus_tools_glyphhold.api` using the existing Nexus
 pack-loading mechanism. Configure `GLYPHHOLD_URL`, `GLYPHHOLD_API_KEY`, optional
 `GLYPHHOLD_TIMEOUT_SECONDS`, `GLYPHHOLD_VERIFY_SSL` and `GLYPHHOLD_CA_BUNDLE`.
@@ -76,7 +76,7 @@ retain both values for user review; never blindly overwrite or export plaintext.
 Provider outages fail explicitly rather than look like an empty vault. Upgrade
 the server and adapters together to use these operations.
 
-### 2.1.1 search and migration recovery
+### 2.1.2 search and migration recovery
 
 `search_secrets(query=...)` also matches saved website addresses and hostnames,
 including IP addresses. Metadata adds `websites` (normalised origins only) and
