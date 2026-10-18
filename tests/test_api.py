@@ -1,70 +1,63 @@
 from __future__ import annotations
 
-from typing import Any
+import importlib
+import sys
+import types
 
-import pytest
 
-nexus_tool_registry = pytest.importorskip("nexus.tool_registry")
-
-from nexus_tools_glyphhold import api  # noqa: E402
+def load_api(monkeypatch):
+    registry = types.ModuleType("nexus.tool_registry")
+    registry.register_tool = lambda **kwargs: lambda fn: fn
+    monkeypatch.setitem(sys.modules, "nexus", types.ModuleType("nexus"))
+    monkeypatch.setitem(sys.modules, "nexus.tool_registry", registry)
+    sys.modules.pop("nexus_tools_glyphhold.api", None)
+    return importlib.import_module("nexus_tools_glyphhold.api")
 
 
 class FakeClient:
-    def __init__(self) -> None:
-        self.deleted_memories: list[str] = []
-        self.deleted_secrets: list[str] = []
+    def __init__(self):
+        self.calls = []
 
-    def get_memory(self, *, memory_id: str) -> dict[str, Any]:
-        return {"id": memory_id, "title": "Deploy host"}
-
-    def delete_memory(self, *, memory_id: str) -> None:
-        self.deleted_memories.append(memory_id)
-
-    def get_secret_metadata(self, *, id_or_name: str) -> dict[str, Any]:
-        return {"id": "sec_123", "name": id_or_name}
-
-    def delete_secret(self, *, id_or_name: str) -> None:
-        self.deleted_secrets.append(id_or_name)
+    def request(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+        return {"ok": True}
 
 
-def test_registers_glyphhold_tools() -> None:
-    names = {tool.name for tool in nexus_tool_registry.iter_tools()}
-
-    assert {
-        "glyphhold.health",
-        "glyphhold.search_memories",
-        "glyphhold.create_memory",
-        "glyphhold.search_secrets",
-        "glyphhold.reveal_secret",
-    }.issubset(names)
-
-
-def test_validation_rejects_invalid_confidence() -> None:
-    with pytest.raises(ValueError, match="confidence"):
-        api.create_memory("cat_123", "Title", "Body", confidence=6)
+def test_scoped_recall_and_broader_search(monkeypatch):
+    api = load_api(monkeypatch)
+    fake = FakeClient()
+    monkeypatch.setattr(api, "get_client", lambda: fake)
+    api.prefetch_memories("Jess", space_id="space_personal", session_id="chat")
+    assert fake.calls[0][0] == ("POST", "/api/v2/recall")
+    assert fake.calls[0][1]["payload"]["session_id"] == "chat"
+    api.search_memories("server", broaden=True)
+    assert fake.calls[1][1]["payload"]["broaden"] is True
 
 
-def test_delete_memory_requires_matching_title(monkeypatch: pytest.MonkeyPatch) -> None:
-    client = FakeClient()
-    monkeypatch.setattr(api, "get_client", lambda: client)
+def test_write_versions_idempotency_and_safe_path(monkeypatch):
+    api = load_api(monkeypatch)
+    fake = FakeClient()
+    monkeypatch.setattr(api, "get_client", lambda: fake)
+    api.create_memory("Title", "Body", "stable-key", space_id="space_work")
+    assert fake.calls[0][1]["payload"]["idempotency_key"] == "stable-key"
+    api.update_memory("mem/1", 3, body="Changed")
+    assert fake.calls[1][0][1] == "/api/v2/memories/mem%2F1"
+    assert fake.calls[1][1]["payload"]["expected_version"] == 3
+    assert not hasattr(api, "reveal_secret_env")
 
-    with pytest.raises(Exception, match="confirmation"):
-        api.delete_memory("mem_123", "Wrong title")
 
-    result = api.delete_memory("mem_123", "Deploy host")
+def test_secret_tools_use_provider_neutral_v2(monkeypatch):
+    api = load_api(monkeypatch)
+    fake = FakeClient()
+    monkeypatch.setattr(api, "get_client", lambda: fake)
+    api.reveal_secret("SSH key", space_id="space_personal")
+    assert fake.calls[0][0] == ("POST", "/api/v2/secrets/SSH%20key/reveal")
+    assert fake.calls[0][1]["params"] == {"space_id": "space_personal"}
 
-    assert result == {"deleted": "mem_123"}
-    assert client.deleted_memories == ["mem_123"]
 
-
-def test_delete_secret_requires_matching_name(monkeypatch: pytest.MonkeyPatch) -> None:
-    client = FakeClient()
-    monkeypatch.setattr(api, "get_client", lambda: client)
-
-    with pytest.raises(Exception, match="confirmation"):
-        api.delete_secret("github-token", "wrong")
-
-    result = api.delete_secret("github-token", "github-token")
-
-    assert result == {"deleted": "github-token"}
-    assert client.deleted_secrets == ["github-token"]
+def test_reveal_forwards_optional_legacy_context(monkeypatch):
+    api = load_api(monkeypatch)
+    fake = FakeClient()
+    monkeypatch.setattr(api, "get_client", lambda: fake)
+    api.reveal_secret("SSH_PASSWORD", requesting_agent="Melchior", tool="ssh")
+    assert fake.calls[0][1]["payload"] == {"requesting_agent": "Melchior", "tool": "ssh"}

@@ -1,79 +1,53 @@
-# nexus-tools-glyphhold
+# Nexus tools for Glyph Hold
 
-Nexus tool pack for connecting agents to Glyph Hold memory and secrets.
+Version 2.0.0 targets Glyph Hold 2.x's `/api/v2` contract. Install the tool pack into your
+Nexus environment and enable `nexus_tools_glyphhold.api` using the existing Nexus
+pack-loading mechanism. Configure `GLYPHHOLD_URL`, `GLYPHHOLD_API_KEY`, optional
+`GLYPHHOLD_TIMEOUT_SECONDS`, `GLYPHHOLD_VERIFY_SSL` and `GLYPHHOLD_CA_BUNDLE`.
 
-## Install
+Create a connection in Glyph Hold with explicit space grants and a default space. Use
+separate keys for work/home connections as appropriate. General access requires
+an explicit grant. Capabilities report the permitted destinations and effective
+default. API-level admin scope never implicitly grants every space.
 
-From a Nexus checkout or runtime environment:
+The `glyphhold` tool namespace exposes:
 
-```bash
-pip install -e /path/to/nexus-tools-glyphhold
-```
+- capabilities, health, list_categories;
+- prefetch_memories, search_memories, list_memories, get_memory;
+- create_memory, update_memory, archive_memory, move_memory;
+- list_memory_revisions, restore_memory_revision;
+- get_context, set_context, placement_guidance;
+- search_secrets, get_secret_metadata, create_secret, reveal_secret.
 
-## Configure
+Recall uses the active space plus permitted General. Search broadens only when
+requested. Returned records retain ID, version, space, provenance and freshness.
+Use a unique conversation `session_id` consistently with context/recall/write
+operations. Context is isolated by authenticated key and session. Finding a
+record in another space never changes the normal write destination.
 
-Set the Glyph Hold connection values in the environment used by Nexus, or in Nexus' `.env` file:
+Search before creating. Create requires a caller-generated stable idempotency
+key: reuse it for retries, and use a new key for a distinct operation. Updates,
+archive, move and restore require the last-read `expected_version`. On conflict,
+reread and reconcile. A move needs write access in both spaces. Owner-confirmed
+placement guidance is available to writing agents; text hints never grant access.
 
-```env
-NEXUS_TOOL_PACKAGES=nexus_tools_glyphhold
-GLYPHHOLD_URL=https://glyphhold.example.com
-GLYPHHOLD_API_KEY=gh_live_xxxxxxxxxxxxxxxxx
-```
+Secret metadata excludes values; reveal is a separate operation used only for
+an explicit user request or an authorised task requiring the value. The tools
+are the same for built-in and Bitwarden/Vaultwarden providers. Bulk environment
+reveals and destructive delete tools are deliberately not exposed.
 
-If combining with other tool packs, append the package root:
+This upgrade removes the v1 category permission model and unversioned maintenance
+calls. Upgrade the service and pack together; GH2 disables legacy data routes by
+default. Tool availability does not guarantee automatic recall: hosts must call
+prefetch or use a native lifecycle integration such as the Hermes provider.
 
-```env
-NEXUS_TOOL_PACKAGES=nexus_tools_sonarr,nexus_tools_radarr,nexus_tools_tautulli,nexus_tools_glyphhold
-```
+Run `python -m pytest tests`. Local tests cover transport, API request contracts,
+path escaping, idempotency/version arguments and provider-neutral secret paths.
+The test registry is isolated when Nexus is unavailable; validate tool registration
+against your installed Nexus version before deployment.
 
-## Safety
-
-Secret metadata tools do not return secret values. Secret reveal tools are intended only for explicit user requests to reveal or use secret values.
-
-## Tools
-
-This pack registers tools under the `glyphhold` namespace.
-
-Memory tools:
-
-- `glyphhold.health`
-- `glyphhold.list_categories`
-- `glyphhold.list_memories`
-- `glyphhold.get_memory`
-- `glyphhold.search_memories`
-- `glyphhold.prefetch_memories`
-- `glyphhold.find_similar_memories`
-- `glyphhold.prepare_memory_write`
-- `glyphhold.create_memory`
-- `glyphhold.update_memory`
-- `glyphhold.update_memory_confidence`
-- `glyphhold.archive_memory`
-- `glyphhold.supersede_memory`
-- `glyphhold.list_memory_revisions`
-- `glyphhold.restore_memory_revision`
-- `glyphhold.delete_memory`
-
-Secret tools:
-
-- `glyphhold.search_secrets`
-- `glyphhold.get_secret_metadata`
-- `glyphhold.create_secret`
-- `glyphhold.update_secret`
-- `glyphhold.delete_secret`
-- `glyphhold.reveal_secret`
-- `glyphhold.reveal_secret_env`
-
-## Development
-
-```bash
-python3.12 -m venv .venv
-.venv/bin/python -m pip install -e /path/to/nexus/nexus -e '.[dev]'
-.venv/bin/python -m ruff check .
-.venv/bin/python -m pytest -q
-```
-
-When testing against a local Nexus checkout whose editable install does not expose the `nexus` package, run Nexus-backed tests with the checkout root on `PYTHONPATH`:
-
-```bash
-PYTHONPATH=/path/to/nexus .venv/bin/python -m pytest -q tests/test_api.py
-```
+Version 0.1.x targets Glyph Hold 1; upgrade the service and tool pack together.
+HTTP redirects are rejected so credentials are never forwarded to another host.
+Errors exclude response bodies, and responses are limited to 8 MiB; reduce the
+requested record count if that budget is exceeded. Secret reveal supports legacy
+`requesting_agent` and `tool` labels when an installation retains those constraints.
