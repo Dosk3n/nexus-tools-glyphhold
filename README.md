@@ -1,14 +1,50 @@
 # Nexus tools for Glyph Hold
 
 Version 2.2.0 targets Glyph Hold 2.x's `/api/v2` contract. Install the tool pack into your
-Nexus environment and enable `nexus_tools_glyphhold.api` using the existing Nexus
-pack-loading mechanism. Configure `GLYPHHOLD_URL`, `GLYPHHOLD_API_KEY`, optional
+Nexus environment and add `nexus_tools_glyphhold` to `NEXUS_TOOL_PACKAGES`
+using the existing Nexus pack-loading mechanism. Configure `GLYPHHOLD_URL`, `GLYPHHOLD_API_KEY`, optional
 `GLYPHHOLD_TIMEOUT_SECONDS`, `GLYPHHOLD_VERIFY_SSL` and `GLYPHHOLD_CA_BUNDLE`.
 
 Create a connection in Glyph Hold with explicit space grants and a default space. Use
 separate keys for work/home connections as appropriate. General access requires
 an explicit grant. Capabilities report the permitted destinations and effective
 default. API-level admin scope never implicitly grants every space.
+
+
+## Install into Nexus
+
+Use the Python environment that runs your existing Nexus installation:
+
+```bash
+python -m pip install --no-deps "git+https://github.com/Dosk3n/nexus-tools-glyphhold.git"
+```
+
+Nexus itself must already be installed in that environment. Add
+`nexus_tools_glyphhold` to the existing comma-separated `NEXUS_TOOL_PACKAGES`
+setting, preserving other packs. Configure the following in Nexus's `.env`:
+
+```dotenv
+NEXUS_TOOL_PACKAGES=nexus_tools_glyphhold
+GLYPHHOLD_URL=http://127.0.0.1:5995
+GLYPHHOLD_API_KEY=your-agent-api-key
+GLYPHHOLD_VERIFY_SSL=true
+NEXUS_RUN_CODE_TIMEOUT_SECONDS=120
+```
+
+Use `ghcr.io/dosk3n/glyphhold:2.2.0` or the current `latest` image for the server.
+Complete its first-run dashboard setup, create an **Agent API key**, then use
+**Spaces** to grant access and choose the connection's default. Create your own
+key; credentials are not included in this repository. If Nexus runs in another
+container/machine, replace localhost with Glyph Hold's reachable address.
+
+Restart/reconnect Nexus after installation. Discover `glyphhold.capabilities`,
+then invoke it with `load_tool("glyphhold.capabilities")()` in Nexus `run_code`.
+For Codex, set the Nexus MCP `tool_timeout_sec` to 150 so it exceeds Nexus's
+120-second execution budget. Secret provider requests can take up to 90 seconds.
+
+Native Windows users: see [Windows compatibility](compat/nexus-windows/README.md)
+for the Nexus subprocess Unicode fix used with this pack. Linux does not need
+that Windows pipe workaround.
 
 The `glyphhold` tool namespace exposes:
 

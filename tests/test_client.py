@@ -170,6 +170,7 @@ def test_error_response_does_not_echo_secret_material(monkeypatch):
         (b"\xff", "invalid text"),
         (b"not-json", "invalid JSON"),
     ],
+    ids=["oversized-response", "invalid-utf8", "invalid-json"],
 )
 def test_unusable_responses_have_safe_errors(monkeypatch, body, reason):
     class Response(FakeResponse):

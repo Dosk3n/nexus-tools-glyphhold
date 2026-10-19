@@ -1,0 +1,42 @@
+--- a/nexus/runner.py
++++ b/nexus/runner.py
+@@ -374,7 +374,7 @@
+     }
+     try:
+         stdout, stderr = process.communicate(
+-            json.dumps(payload, ensure_ascii=False) + "\n",
++            json.dumps(payload, ensure_ascii=True) + "\n",
+             timeout=timeout_seconds,
+         )
+     except subprocess.TimeoutExpired as exc:
+@@ -592,7 +592,7 @@
+                 message="Execution worker stdin is unavailable",
+             )
+         )
+-    process.stdin.write(json.dumps(payload, ensure_ascii=False) + "\n")
++    process.stdin.write(json.dumps(payload, ensure_ascii=True) + "\n")
+     process.stdin.flush()
+ 
+ 
+--- a/nexus/execution_worker.py
++++ b/nexus/execution_worker.py
+@@ -37,7 +37,7 @@
+ 
+ 
+ def _send_message(payload: Mapping[str, Any]) -> None:
+-    sys.__stdout__.write(json.dumps(payload, ensure_ascii=False) + "\n")
++    sys.__stdout__.write(json.dumps(payload, ensure_ascii=True) + "\n")
+     sys.__stdout__.flush()
+ 
+ 
+--- a/nexus/tool_execution_worker.py
++++ b/nexus/tool_execution_worker.py
+@@ -22,7 +22,7 @@
+ 
+ 
+ def _write_response(payload: Mapping[str, Any]) -> None:
+-    sys.__stdout__.write(json.dumps(payload, ensure_ascii=False) + "\n")
++    sys.__stdout__.write(json.dumps(payload, ensure_ascii=True) + "\n")
+     sys.__stdout__.flush()
+ 
+ 

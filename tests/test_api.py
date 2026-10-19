@@ -86,3 +86,4 @@ def test_migration_preview_payload(monkeypatch):
     monkeypatch.setattr(api, "get_client", lambda: fake)
     api.migrate_secret("sec_test", 1, dry_run=True)
     assert fake.calls[0][1]["payload"]["dry_run"] is True
+    assert fake.calls[0][0][1].endswith("/migrate/preview")
