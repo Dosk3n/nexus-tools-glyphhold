@@ -1,6 +1,6 @@
 # Nexus tools for Glyph Hold
 
-Version 2.1.3 targets Glyph Hold 2.x's `/api/v2` contract. Install the tool pack into your
+Version 2.2.0 targets Glyph Hold 2.x's `/api/v2` contract. Install the tool pack into your
 Nexus environment and enable `nexus_tools_glyphhold.api` using the existing Nexus
 pack-loading mechanism. Configure `GLYPHHOLD_URL`, `GLYPHHOLD_API_KEY`, optional
 `GLYPHHOLD_TIMEOUT_SECONDS`, `GLYPHHOLD_VERIFY_SSL` and `GLYPHHOLD_CA_BUNDLE`.
@@ -88,3 +88,11 @@ Use `provider_name=builtin` for the remaining migration checklist.
 without changing either provider. Known provider failure codes produce safe,
 actionable tool errors; arbitrary error bodies are not echoed. An uncertain
 write requires destination inspection before retrying.
+
+## Selective recall (2.2)
+
+Automatic recall supplies a small relevant starting context. An empty result does
+not mean that no matching memories exist; even a nonempty result can concern the
+wrong entity or space. Search explicitly for missing personal facts, try shorter
+terms or synonyms, and broaden deliberately for another permitted space. Read the
+full record by ID when an excerpt omits evidence. Tool parameters are unchanged.

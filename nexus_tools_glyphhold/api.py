@@ -37,7 +37,11 @@ def list_categories() -> list[dict[str, Any]]:
 
 @register_tool(
     namespace="glyphhold",
-    description="Retrieve bounded traceable memory from active and permitted General spaces.",
+    description=(
+        "Retrieve bounded memory from active and permitted General spaces. Recall is selective: "
+        "check entity and space even for nonempty results, search when needed, and get full "
+        "records by ID when excerpts are incomplete."
+    ),
 )
 def prefetch_memories(
     message: str,
@@ -63,7 +67,10 @@ def prefetch_memories(
 @register_tool(
     namespace="glyphhold",
     aliases=["search_memory"],
-    description="Search active space; explicitly broaden across other permitted spaces when needed. Does not change write destination.",
+    description=(
+        "Search active space; try shorter terms or synonyms when needed. Explicitly broaden "
+        "across other permitted spaces when needed. Does not change write destination."
+    ),
 )
 def search_memories(
     query: str,

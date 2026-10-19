@@ -15,7 +15,7 @@ try:
 except ImportError:
     _nexus_get_setting = None
 
-DEFAULT_USER_AGENT = "NexusMCP/0.1 nexus-tools-glyphhold/2.1.3"
+DEFAULT_USER_AGENT = "NexusMCP/0.1 nexus-tools-glyphhold/2.2.0"
 
 
 SAFE_VAULT_ERRORS = {
